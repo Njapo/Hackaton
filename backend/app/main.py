@@ -80,14 +80,6 @@ def health_check():
 @app.post("/api/auth/register", response_model=schemas.User, tags=["Authentication"])
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """Register a new user."""
-    # Check if username already exists
-    db_user = crud.get_user_by_username(db, username=user.username)
-    if db_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
-        )
-    
     # Check if email already exists
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
