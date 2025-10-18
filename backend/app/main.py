@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from . import models, schemas, crud, auth
 from .database import engine, get_db, init_db
 from .ai_client import get_ai_response
-from .skin_analyzer import analyze_skin_image
+from .skin_analyzer import analyze_skin_image, analyze_skin_image_with_confidence
 
 # Load environment variables
 load_dotenv()
@@ -214,6 +214,36 @@ async def skin_analysis(
     db_message = crud.create_chat_message(db, chat_message_data, user_id=current_user.id)
 
     return db_message
+
+
+# ============= Image Analysis ONLY Endpoint (No Gemini) =============
+
+@app.post("/api/ai/analyze-image", tags=["AI"])
+async def analyze_image_only(
+    image: UploadFile = File(...),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Analyzes ONLY the skin image using the Hugging Face model.
+    Does NOT use Gemini - just returns the raw prediction from the image model.
+    Returns top 5 predictions with confidence scores.
+    Useful for testing if the image analysis model is working correctly.
+    """
+    # Analyze the image with the skin disease model
+    predictions = analyze_skin_image_with_confidence(image, top_k=5)
+    
+    if predictions[0]["disease"] == "Could not analyze image":
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to analyze the provided image."
+        )
+
+    return {
+        "success": True,
+        "predictions": predictions,
+        "model_used": "Jayanth2002/dinov2-base-finetuned-SkinDisease",
+        "message": "Image analysis complete. These are the top predictions from the Hugging Face model."
+    }
 
 
 # ============= User History Endpoint =============
