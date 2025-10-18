@@ -1,30 +1,30 @@
 """
-ai_client.py - OpenAI API Client
+ai_client.py - Google Gemini API Client
 
-This file handles all interactions with the OpenAI API.
-Includes functions for chat completions, embeddings, and other AI features.
+This file handles all interactions with the Google Gemini API.
+Includes functions for chat completions and other AI features.
 """
 
 import os
 from typing import Optional, List, Dict, Any
-from openai import OpenAI
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize Gemini client
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Default model configuration
-DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_MODEL = "gemini-pro"
 DEFAULT_MAX_TOKENS = 1000
 DEFAULT_TEMPERATURE = 0.7
 
 
 class AIClient:
     """
-    Client class for interacting with OpenAI API.
+    Client class for interacting with Google Gemini API.
     Provides methods for various AI operations related to animals.
     """
     
@@ -33,10 +33,9 @@ class AIClient:
         Initialize the AI client.
         
         Args:
-            model: The OpenAI model to use (default: gpt-3.5-turbo)
+            model: The Gemini model to use (default: gemini-pro)
         """
-        self.model = model
-        self.client = client
+        self.model = genai.GenerativeModel(model)
     
     def chat_completion(
         self, 
@@ -45,7 +44,7 @@ class AIClient:
         temperature: float = DEFAULT_TEMPERATURE
     ) -> Dict[str, Any]:
         """
-        Send a chat completion request to OpenAI.
+        Send a chat completion request to Google Gemini.
         
         Args:
             messages: List of message dictionaries with 'role' and 'content'
@@ -56,18 +55,31 @@ class AIClient:
             Dictionary containing response text and metadata
         """
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature
+            # Convert messages to Gemini format
+            # Combine system and user messages into a single prompt
+            prompt = ""
+            for msg in messages:
+                if msg["role"] == "system":
+                    prompt += f"{msg['content']}\n\n"
+                elif msg["role"] == "user":
+                    prompt += f"{msg['content']}"
+            
+            # Configure generation
+            generation_config = {
+                "temperature": temperature,
+                "max_output_tokens": max_tokens,
+            }
+            
+            response = self.model.generate_content(
+                prompt,
+                generation_config=generation_config
             )
             
             return {
-                "response": response.choices[0].message.content,
-                "model": response.model,
-                "tokens_used": response.usage.total_tokens if response.usage else None,
-                "finish_reason": response.choices[0].finish_reason
+                "response": response.text,
+                "model": DEFAULT_MODEL,
+                "tokens_used": None,  # Gemini doesn't return token count in the same way
+                "finish_reason": "stop"
             }
         except Exception as e:
             return {
