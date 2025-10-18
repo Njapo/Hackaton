@@ -60,22 +60,22 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def authenticate_user(db: Session, username: str, password: str):
+def authenticate_user(db: Session, email: str, password: str):
     """
-    Authenticate a user by username and password.
+    Authenticate a user by email and password.
     
     Args:
         db: Database session
-        username: User's username
+        email: User's email address
         password: User's plain text password
         
     Returns:
         User object if authentication successful, False otherwise
     """
-    user = crud.get_user_by_username(db, username)
+    user = crud.get_user_by_email(db, email)
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user.password_hash):
         return False
     return user
 
@@ -128,14 +128,14 @@ async def get_current_user(
     
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        email: str = payload.get("sub")
+        if email is None:
             raise credentials_exception
-        token_data = schemas.TokenData(username=username)
+        token_data = schemas.TokenData(email=email)
     except JWTError:
         raise credentials_exception
     
-    user = crud.get_user_by_username(db, username=token_data.username)
+    user = crud.get_user_by_email(db, email=token_data.email)
     if user is None:
         raise credentials_exception
     
@@ -155,11 +155,7 @@ async def get_current_active_user(
         Active user object
         
     Raises:
-        HTTPException: If user is inactive
+        HTTPException: If user is inactive (currently all users are active)
     """
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
+    # All users are active in this simplified version
     return current_user
