@@ -157,30 +157,60 @@ async def skin_analysis(
 ):
     """
     Analyzes a skin image and user-provided symptoms.
-    1. The image is analyzed by a fine-tuned image model for disease prediction.
-    2. The prediction and user symptoms are sent to a generative AI for a detailed response.
+    1. The image is analyzed by a fine-tuned Hugging Face model for disease prediction with confidence scores.
+    2. The top predictions and user symptoms are sent to Gemini AI for detailed analysis.
     """
-    # 1. Analyze the image with the skin disease model
-    predicted_disease = analyze_skin_image(image)
+    # 1. Analyze the image with the skin disease model (get top 5 predictions with confidence)
+    predictions = analyze_skin_image_with_confidence(image, top_k=5)
     
-    if "Could not analyze image" in predicted_disease:
+    if predictions[0]["disease"] == "Could not analyze image":
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to analyze the provided image."
         )
 
-    # 2. Create a prompt for the generative AI
+    # Format predictions for the prompt
+    predictions_text = "\n".join([
+        f"  - {pred['disease']}: {pred['confidence']:.1%} confidence"
+        for pred in predictions
+    ])
+    
+    top_prediction = predictions[0]["disease"]
+    top_confidence = predictions[0]["confidence"]
+
+    # 2. Create a detailed prompt for Gemini with system instruction
     prompt = (
-        f"A user is asking about a skin condition. "
-        f"A machine learning model analyzed a photo they provided and predicted the following condition: '{predicted_disease}'. "
-        f"The user also described their symptoms as: '{symptoms}'.\n\n"
-        f"Based on the model's prediction and the user's symptoms, provide a helpful, "
-        f"informative, and safe response. IMPORTANT: Start the response with a clear disclaimer that you are an AI, "
-        f"not a medical professional, and that this is not a diagnosis. Advise the user to consult a doctor. "
-        f"Then, you can provide some general information about the predicted condition."
+        f"SYSTEM INSTRUCTION:\n"
+        f"You are SkinAI, an intelligent assistant specialized in skin disease detection and dermatology-related AI analysis.\n\n"
+        f"Your role is to help users understand possible skin conditions from images or text descriptions. When analyzing an image or symptom description:\n\n"
+        f"1. Provide a **specific, reasoned analysis** of what the condition might be — e.g., 'This pattern appears consistent with alopecia areata' or 'This looks similar to eczema or psoriasis.'\n"
+        f"2. You may list **the most probable conditions (1–3 possibilities)** with short reasoning for each (texture, color, shape, or pattern).\n"
+        f"3. Avoid vague or generic answers like 'consult a doctor.' Instead, focus on identifying possible conditions first.\n"
+        f"4. Use clear and confident but responsible phrasing:\n"
+        f"   - ✅ 'This appears consistent with...'\n"
+        f"   - ✅ 'This resembles...'\n"
+        f"   - ✅ 'This could indicate early signs of...'\n"
+        f"5. After your detailed analysis, **end the message with a short disclaimer**, such as:\n"
+        f"   > 'Note: This is an AI-based educational analysis. I recommend consulting a certified dermatologist for a precise diagnosis.'\n"
+        f"6. Be concise, factual, and descriptive. If uncertain, describe possible differential diagnoses instead of refusing to answer.\n"
+        f"7. You are NOT a doctor, but you are trained to recognize dermatological patterns in a research/AI context.\n\n"
+        f"Your output should follow this format:\n"
+        f"---\n"
+        f"**Possible Condition:** [Condition Name]\n"
+        f"**Reasoning:** [Why this condition matches the symptoms/image]\n"
+        f"**Recommendation:** [Basic care suggestions]\n"
+        f"**Note:** This is an AI-based educational analysis. Please consult a dermatologist for a professional diagnosis.\n"
+        f"---\n\n"
+        f"USER INPUT:\n"
+        f"A specialized skin disease detection model analyzed a photo and returned these predictions:\n"
+        f"{predictions_text}\n\n"
+        f"The top prediction is: {top_prediction} (confidence: {top_confidence:.1%})\n\n"
+        f"The user also described their symptoms as: '{symptoms}'\n\n"
+        f"Based on the AI model's predictions (especially the top prediction) and the user's symptoms, "
+        f"provide your detailed analysis following the format above."
     )
 
-    # 3. Get the response from the generative AI
+    # 3. Get the response from Gemini AI
     ai_response_dict = get_ai_response(prompt)
     
     # Extract the text from the response
@@ -189,26 +219,27 @@ async def skin_analysis(
     # Check if it's a safety block and generate a custom response
     finish_reason = ai_response_dict.get("finish_reason", "")
     if "safety_block" in finish_reason or "Unable to generate response" in ai_response_text:
-        # Generate a custom response based on the prediction
+        # Generate a custom response based on the predictions
         ai_response_text = (
-            f"⚠️ **IMPORTANT MEDICAL DISCLAIMER**: I am an AI assistant, not a medical professional. "
-            f"This is NOT a medical diagnosis. Please consult a licensed dermatologist or doctor for proper diagnosis and treatment.\n\n"
-            f"**Image Analysis Result**: The AI model has identified your condition as potentially related to **{predicted_disease}**.\n\n"
-            f"**Your Symptoms**: {symptoms}\n\n"
-            f"**General Recommendations**:\n"
-            f"1. 🩺 **Consult a dermatologist immediately** - They can provide a proper diagnosis and treatment plan\n"
+            f"**Possible Condition:** {top_prediction}\n\n"
+            f"**AI Model Analysis:**\n"
+            f"The specialized skin disease detection model analyzed your image and provided these predictions:\n"
+            f"{predictions_text}\n\n"
+            f"**Your Symptoms:** {symptoms}\n\n"
+            f"**Reasoning:** The AI model has identified this pattern with {top_confidence:.1%} confidence based on visual features in the image. "
+            f"The model was trained on thousands of dermatological images to recognize patterns associated with various skin conditions.\n\n"
+            f"**General Recommendations:**\n"
+            f"1. 🩺 **Consult a dermatologist** - They can provide a proper clinical diagnosis and treatment plan\n"
             f"2. 🧼 **Keep the affected area clean** - Gently wash with mild, fragrance-free soap\n"
             f"3. 🚫 **Avoid scratching or picking** - This can lead to infection or scarring\n"
             f"4. 📸 **Document your symptoms** - Take daily photos to track changes\n"
             f"5. 💊 **Do NOT self-medicate** - Wait for professional medical advice before using any treatments\n\n"
-            f"**Next Steps**: Schedule an appointment with a dermatologist as soon as possible. "
-            f"Bring your symptom documentation and mention that an AI analysis suggested {predicted_disease}. "
-            f"A medical professional can confirm the diagnosis and recommend appropriate treatment."
+            f"**Note:** This is an AI-based educational analysis. I recommend consulting a certified dermatologist for a precise diagnosis and treatment plan."
         )
 
     # 4. Save the interaction to the database
     chat_message_data = schemas.ChatMessageCreate(
-        message=f"Symptoms: {symptoms} | Image Prediction: {predicted_disease}",
+        message=f"Symptoms: {symptoms} | Image Prediction: {top_prediction} ({top_confidence:.1%} confidence)",
         response=ai_response_text
     )
     db_message = crud.create_chat_message(db, chat_message_data, user_id=current_user.id)
