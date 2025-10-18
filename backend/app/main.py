@@ -181,7 +181,10 @@ async def skin_analysis(
     )
 
     # 3. Get the response from the generative AI
-    ai_response_text = get_ai_response(prompt)
+    ai_response_dict = get_ai_response(prompt)
+    
+    # Extract the text from the response
+    ai_response_text = ai_response_dict.get("response", "Unable to generate response")
 
     # 4. Save the interaction to the database
     chat_message_data = schemas.ChatMessageCreate(
