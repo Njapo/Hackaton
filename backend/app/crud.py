@@ -6,7 +6,6 @@ These functions abstract database queries and provide a clean interface for rout
 
 CRUD operations for:
 - User: Authentication and profile management
-- Animal: Pet/animal management
 - ChatMessage: Conversation history management
 
 All functions handle SQLAlchemy sessions properly and return typed objects.
@@ -129,316 +128,54 @@ def delete_user(db: Session, user_id: int) -> bool:
         True if deleted, False if not found
     """
     db_user = get_user(db, user_id)
-    if not db_user:
-        return False
-    
-    db.delete(db_user)
-    db.commit()
-    return True
+    if db_user:
+        db.delete(db_user)
+        db.commit()
+        return True
+    return False
 
 
-# ============= Animal CRUD Operations =============
+# ============= Chat Message CRUD Operations =============
 
-def get_animal(db: Session, animal_id: int) -> Optional[models.Animal]:
+def create_chat_message(db: Session, message: schemas.ChatMessageCreate, user_id: int) -> models.ChatMessage:
     """
-    Get an animal by ID.
-    
-    Args:
-        db: Database session
-        animal_id: Animal's ID
-        
-    Returns:
-        Animal object or None if not found
-    """
-    return db.query(models.Animal).filter(models.Animal.id == animal_id).first()
-
-
-def get_animals(db: Session, skip: int = 0, limit: int = 100) -> List[models.Animal]:
-    """
-    Get a list of all animals with pagination.
-    
-    Args:
-        db: Database session
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        
-    Returns:
-        List of Animal objects
-    """
-    return db.query(models.Animal).offset(skip).limit(limit).all()
-
-
-def get_animals_by_owner(db: Session, owner_id: int, skip: int = 0, limit: int = 100) -> List[models.Animal]:
-    """
-    Get all animals owned by a specific user.
-    
-    Args:
-        db: Database session
-        owner_id: Owner's user ID
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        
-    Returns:
-        List of Animal objects
-    """
-    return db.query(models.Animal).filter(
-        models.Animal.owner_id == owner_id
-    ).offset(skip).limit(limit).all()
-
-
-def get_animals_by_species(db: Session, species: str, skip: int = 0, limit: int = 100) -> List[models.Animal]:
-    """
-    Get animals by species.
-    
-    Args:
-        db: Database session
-        species: Animal species to filter by
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        
-    Returns:
-        List of Animal objects
-    """
-    return db.query(models.Animal).filter(
-        models.Animal.species.ilike(f"%{species}%")
-    ).offset(skip).limit(limit).all()
-
-
-def create_animal(db: Session, animal: schemas.AnimalCreate, owner_id: int) -> models.Animal:
-    """
-    Create a new animal.
-    
-    Args:
-        db: Database session
-        animal: AnimalCreate schema with animal data
-        owner_id: ID of the user who owns this animal
-        
-    Returns:
-        Created Animal object
-    """
-    db_animal = models.Animal(**animal.model_dump(), owner_id=owner_id)
-    db.add(db_animal)
-    db.commit()
-    db.refresh(db_animal)
-    return db_animal
-
-
-def update_animal(db: Session, animal_id: int, animal_update: schemas.AnimalUpdate) -> Optional[models.Animal]:
-    """
-    Update animal information.
-    
-    Args:
-        db: Database session
-        animal_id: Animal's ID
-        animal_update: AnimalUpdate schema with updated fields
-        
-    Returns:
-        Updated Animal object or None if not found
-    """
-    db_animal = get_animal(db, animal_id)
-    if not db_animal:
-        return None
-    
-    update_data = animal_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_animal, field, value)
-    
-    db.commit()
-    db.refresh(db_animal)
-    return db_animal
-
-
-def delete_animal(db: Session, animal_id: int) -> bool:
-    """
-    Delete an animal.
-    
-    Args:
-        db: Database session
-        animal_id: Animal's ID
-        
-    Returns:
-        True if deleted, False if not found
-    """
-    db_animal = get_animal(db, animal_id)
-    if not db_animal:
-        return False
-    
-    db.delete(db_animal)
-    db.commit()
-    return True
-
-
-# ============= ChatMessage CRUD Operations =============
-
-def get_chat_message(db: Session, message_id: int) -> Optional[models.ChatMessage]:
-    """
-    Get a chat message by ID.
-    
-    Args:
-        db: Database session
-        message_id: Message ID
-        
-    Returns:
-        ChatMessage object or None if not found
-    """
-    return db.query(models.ChatMessage).filter(models.ChatMessage.id == message_id).first()
-
-
-def get_chat_messages_by_animal(
-    db: Session, 
-    animal_id: int, 
-    skip: int = 0, 
-    limit: int = 100
-) -> List[models.ChatMessage]:
-    """
-    Get all chat messages for a specific animal, ordered by timestamp (newest first).
-    
-    Args:
-        db: Database session
-        animal_id: Animal's ID
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        
-    Returns:
-        List of ChatMessage objects ordered by timestamp descending
-    """
-    return db.query(models.ChatMessage).filter(
-        models.ChatMessage.animal_id == animal_id
-    ).order_by(desc(models.ChatMessage.timestamp)).offset(skip).limit(limit).all()
-
-
-def get_chat_messages_by_sender(
-    db: Session,
-    animal_id: int,
-    sender: str,
-    skip: int = 0,
-    limit: int = 100
-) -> List[models.ChatMessage]:
-    """
-    Get chat messages for an animal filtered by sender (Owner or AI).
-    
-    Args:
-        db: Database session
-        animal_id: Animal's ID
-        sender: Message sender ('Owner' or 'AI')
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        
-    Returns:
-        List of ChatMessage objects
-    """
-    return db.query(models.ChatMessage).filter(
-        models.ChatMessage.animal_id == animal_id,
-        models.ChatMessage.sender == sender
-    ).order_by(desc(models.ChatMessage.timestamp)).offset(skip).limit(limit).all()
-
-
-def get_chat_messages_by_severity(
-    db: Session,
-    animal_id: int,
-    severity: str,
-    skip: int = 0,
-    limit: int = 100
-) -> List[models.ChatMessage]:
-    """
-    Get chat messages filtered by severity level.
-    
-    Args:
-        db: Database session
-        animal_id: Animal's ID
-        severity: Severity level ('low', 'moderate', 'urgent')
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-        
-    Returns:
-        List of ChatMessage objects
-    """
-    return db.query(models.ChatMessage).filter(
-        models.ChatMessage.animal_id == animal_id,
-        models.ChatMessage.severity == severity
-    ).order_by(desc(models.ChatMessage.timestamp)).offset(skip).limit(limit).all()
-
-
-def create_chat_message(db: Session, message: schemas.ChatMessageCreate) -> models.ChatMessage:
-    """
-    Create a new chat message.
+    Create a new chat message for a user.
     
     Args:
         db: Database session
         message: ChatMessageCreate schema with message data
+        user_id: The ID of the user who owns this message
         
     Returns:
         Created ChatMessage object
     """
-    db_message = models.ChatMessage(**message.model_dump())
+    db_message = models.ChatMessage(
+        message=message.message,
+        response=message.response,
+        owner_id=user_id
+    )
     db.add(db_message)
     db.commit()
     db.refresh(db_message)
     return db_message
 
 
-def update_chat_message(
-    db: Session, 
-    message_id: int, 
-    message_update: schemas.ChatMessageUpdate
-) -> Optional[models.ChatMessage]:
+def get_user_chat_messages(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[models.ChatMessage]:
     """
-    Update a chat message.
+    Get all chat messages for a specific user, ordered by most recent.
     
     Args:
         db: Database session
-        message_id: Message ID
-        message_update: ChatMessageUpdate schema with updated fields
+        user_id: The ID of the user
+        skip: Number of records to skip
+        limit: Maximum number of records to return
         
     Returns:
-        Updated ChatMessage object or None if not found
+        List of ChatMessage objects
     """
-    db_message = get_chat_message(db, message_id)
-    if not db_message:
-        return None
-    
-    update_data = message_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_message, field, value)
-    
-    db.commit()
-    db.refresh(db_message)
-    return db_message
-
-
-def delete_chat_message(db: Session, message_id: int) -> bool:
-    """
-    Delete a chat message.
-    
-    Args:
-        db: Database session
-        message_id: Message ID
-        
-    Returns:
-        True if deleted, False if not found
-    """
-    db_message = get_chat_message(db, message_id)
-    if not db_message:
-        return False
-    
-    db.delete(db_message)
-    db.commit()
-    return True
-
-
-def delete_all_chat_messages_for_animal(db: Session, animal_id: int) -> int:
-    """
-    Delete all chat messages for a specific animal.
-    
-    Args:
-        db: Database session
-        animal_id: Animal's ID
-        
-    Returns:
-        Number of messages deleted
-    """
-    count = db.query(models.ChatMessage).filter(
-        models.ChatMessage.animal_id == animal_id
-    ).delete()
-    db.commit()
-    return count
+    return db.query(models.ChatMessage)\
+             .filter(models.ChatMessage.owner_id == user_id)\
+             .order_by(desc(models.ChatMessage.created_at))\
+             .offset(skip)\
+             .limit(limit)\
+             .all()

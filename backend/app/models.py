@@ -6,8 +6,7 @@ Each class represents a table in the database.
 
 Models:
 - User: Stores user authentication and profile information
-- Animal: Stores animal/pet information owned by users
-- ChatMessage: Stores chat history between owner and AI for each animal
+- ChatMessage: Stores chat history for skin analysis
 """
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, ForeignKey
@@ -28,7 +27,7 @@ class User(Base):
     - created_at: Timestamp when user account was created
     
     Relationships:
-    - animals: One-to-many relationship with Animal model
+    - chat_messages: One-to-many relationship with ChatMessage model
     """
     __tablename__ = "users"
 
@@ -39,76 +38,29 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    animals = relationship("Animal", back_populates="owner", cascade="all, delete-orphan")
-
-
-
-
-class Animal(Base):
-    """
-    Animal model for storing pet/animal information.
-    
-    Fields:
-    - id: Primary key, auto-incrementing integer
-    - owner_id: Foreign key to User.id (who owns this animal)
-    - name: Animal's name (e.g., "Fluffy", "Rex")
-    - species: Type of animal (e.g., "Dog", "Cat", "Bird")
-    - breed: Specific breed (e.g., "Golden Retriever", "Persian")
-    - age: Age in years
-    - weight: Weight in kilograms (float for precision)
-    - icon_emoji: Emoji icon for the animal (e.g., "🐕", "🐱", "🐦")
-    
-    Relationships:
-    - owner: Many-to-one relationship with User model
-    - chat_messages: One-to-many relationship with ChatMessage model
-    """
-    __tablename__ = "animals"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(100), nullable=False)
-    species = Column(String(50), nullable=False)
-    breed = Column(String(100), nullable=True)
-    age = Column(Integer, nullable=True)
-    weight = Column(Float, nullable=True)
-    icon_emoji = Column(String(10), nullable=True, default="🐾")
-
-    # Relationships
-    owner = relationship("User", back_populates="animals")
-    chat_messages = relationship("ChatMessage", back_populates="animal", cascade="all, delete-orphan")
+    chat_messages = relationship("ChatMessage", back_populates="owner", cascade="all, delete-orphan")
 
 
 class ChatMessage(Base):
     """
-    ChatMessage model for storing conversation history between owner and AI.
-    
-    Each message is associated with a specific animal and tracks:
-    - Who sent it (Owner or AI)
-    - The message content
-    - Health severity level (if applicable)
-    - Any medicine suggestions from AI
+    ChatMessage model for storing conversation history.
     
     Fields:
-    - id: Primary key, auto-incrementing integer
-    - animal_id: Foreign key to Animal.id (which animal this chat is about)
-    - sender: Who sent the message - either 'Owner' or 'AI'
-    - text: The actual message content
-    - severity: Health severity level - 'low', 'moderate', or 'urgent'
-    - timestamp: When the message was sent
-    - medicine_suggestion: JSON string or text with medicine recommendations
+    - id: Primary key
+    - owner_id: Foreign key to the user who initiated the chat
+    - message: The user's original query/symptoms
+    - response: The AI's generated response
+    - created_at: Timestamp of the interaction
     
     Relationships:
-    - animal: Many-to-one relationship with Animal model
+    - owner: Many-to-one relationship with User model
     """
     __tablename__ = "chat_messages"
 
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    animal_id = Column(Integer, ForeignKey("animals.id", ondelete="CASCADE"), nullable=False)
-    sender = Column(String(10), nullable=False)  # 'Owner' or 'AI'
-    text = Column(Text, nullable=False)
-    severity = Column(String(20), nullable=True, default="low")  # 'low', 'moderate', 'urgent'
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    medicine_suggestion = Column(Text, nullable=True)  # JSON string or plain text
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    message = Column(Text, nullable=False)
+    response = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships
-    animal = relationship("Animal", back_populates="chat_messages")
+    owner = relationship("User", back_populates="chat_messages")

@@ -6,7 +6,6 @@ These schemas ensure type safety and automatic API documentation.
 
 Schemas for:
 - User: Authentication and user profile
-- Animal: Pet/animal information
 - ChatMessage: Conversation history between owner and AI
 """
 
@@ -50,98 +49,24 @@ class User(UserInDB):
     pass
 
 
-# ============= Animal Schemas =============
-
-class AnimalBase(BaseModel):
-    """Base schema for Animal with common attributes."""
-    name: str = Field(..., min_length=1, max_length=100, description="Animal's name")
-    species: str = Field(..., min_length=1, max_length=50, description="Animal species (Dog, Cat, etc.)")
-    breed: Optional[str] = Field(None, max_length=100, description="Animal breed")
-    age: Optional[int] = Field(None, ge=0, le=100, description="Age in years")
-    weight: Optional[float] = Field(None, ge=0, le=1000, description="Weight in kg")
-    icon_emoji: Optional[str] = Field(default="🐾", max_length=10, description="Emoji icon")
-
-
-class AnimalCreate(AnimalBase):
-    """Schema for creating a new animal."""
-    pass
-
-
-class AnimalUpdate(BaseModel):
-    """Schema for updating animal information."""
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    species: Optional[str] = Field(None, min_length=1, max_length=50)
-    breed: Optional[str] = Field(None, max_length=100)
-    age: Optional[int] = Field(None, ge=0, le=100)
-    weight: Optional[float] = Field(None, ge=0, le=1000)
-    icon_emoji: Optional[str] = Field(None, max_length=10)
-
-
-class AnimalInDB(AnimalBase):
-    """Schema for Animal as stored in database."""
-    id: int
-    owner_id: int
-
-    class Config:
-        from_attributes = True
-
-
-class Animal(AnimalInDB):
-    """Schema for Animal in API responses."""
-    pass
-
-
-class AnimalWithMessages(Animal):
-    """Schema for Animal with chat messages included."""
-    chat_messages: List['ChatMessage'] = []
-
-    class Config:
-        from_attributes = True
-
-
-# ============= ChatMessage Schemas =============
+# ============= Chat Message Schemas =============
 
 class ChatMessageBase(BaseModel):
     """Base schema for ChatMessage."""
-    sender: Literal['Owner', 'AI'] = Field(..., description="Who sent the message: 'Owner' or 'AI'")
-    text: str = Field(..., min_length=1, description="Message content")
-    severity: Optional[Literal['low', 'moderate', 'urgent']] = Field(
-        default='low',
-        description="Health severity level"
-    )
-    medicine_suggestion: Optional[str] = Field(None, description="Medicine suggestions (JSON or text)")
-
-    @field_validator('medicine_suggestion')
-    @classmethod
-    def validate_medicine_suggestion(cls, v):
-        """Validate that medicine_suggestion is valid JSON if provided."""
-        if v is not None and v.strip():
-            try:
-                # Try to parse as JSON to validate format
-                json.loads(v)
-            except json.JSONDecodeError:
-                # If not valid JSON, just return as plain text (that's okay too)
-                pass
-        return v
+    message: str = Field(..., description="User's message or query")
 
 
 class ChatMessageCreate(ChatMessageBase):
     """Schema for creating a new chat message."""
-    animal_id: int = Field(..., description="ID of the animal this message is about")
-
-
-class ChatMessageUpdate(BaseModel):
-    """Schema for updating a chat message."""
-    text: Optional[str] = Field(None, min_length=1)
-    severity: Optional[Literal['low', 'moderate', 'urgent']] = None
-    medicine_suggestion: Optional[str] = None
+    response: str = Field(..., description="AI's generated response")
 
 
 class ChatMessageInDB(ChatMessageBase):
     """Schema for ChatMessage as stored in database."""
     id: int
-    animal_id: int
-    timestamp: datetime
+    owner_id: int
+    response: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -152,7 +77,7 @@ class ChatMessage(ChatMessageInDB):
     pass
 
 
-# ============= Authentication Schemas =============
+# ============= Token Schemas =============
 
 class Token(BaseModel):
     """Schema for JWT token response."""
@@ -189,7 +114,6 @@ class ErrorResponse(BaseModel):
 
 class AIChatRequest(BaseModel):
     """Schema for AI chat request."""
-    animal_id: int = Field(..., description="ID of the animal")
     message: str = Field(..., min_length=1, description="User's message to AI")
 
 
