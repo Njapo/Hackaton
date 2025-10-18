@@ -17,7 +17,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Default model configuration
-DEFAULT_MODEL = "gemini-pro"
+DEFAULT_MODEL = "gemini-1.5-flash"
 DEFAULT_MAX_TOKENS = 1000
 DEFAULT_TEMPERATURE = 0.7
 
