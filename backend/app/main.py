@@ -185,6 +185,26 @@ async def skin_analysis(
     
     # Extract the text from the response
     ai_response_text = ai_response_dict.get("response", "Unable to generate response")
+    
+    # Check if it's a safety block and generate a custom response
+    finish_reason = ai_response_dict.get("finish_reason", "")
+    if "safety_block" in finish_reason or "Unable to generate response" in ai_response_text:
+        # Generate a custom response based on the prediction
+        ai_response_text = (
+            f"⚠️ **IMPORTANT MEDICAL DISCLAIMER**: I am an AI assistant, not a medical professional. "
+            f"This is NOT a medical diagnosis. Please consult a licensed dermatologist or doctor for proper diagnosis and treatment.\n\n"
+            f"**Image Analysis Result**: The AI model has identified your condition as potentially related to **{predicted_disease}**.\n\n"
+            f"**Your Symptoms**: {symptoms}\n\n"
+            f"**General Recommendations**:\n"
+            f"1. 🩺 **Consult a dermatologist immediately** - They can provide a proper diagnosis and treatment plan\n"
+            f"2. 🧼 **Keep the affected area clean** - Gently wash with mild, fragrance-free soap\n"
+            f"3. 🚫 **Avoid scratching or picking** - This can lead to infection or scarring\n"
+            f"4. 📸 **Document your symptoms** - Take daily photos to track changes\n"
+            f"5. 💊 **Do NOT self-medicate** - Wait for professional medical advice before using any treatments\n\n"
+            f"**Next Steps**: Schedule an appointment with a dermatologist as soon as possible. "
+            f"Bring your symptom documentation and mention that an AI analysis suggested {predicted_disease}. "
+            f"A medical professional can confirm the diagnosis and recommend appropriate treatment."
+        )
 
     # 4. Save the interaction to the database
     chat_message_data = schemas.ChatMessageCreate(
