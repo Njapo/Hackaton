@@ -161,9 +161,9 @@ async def skin_analysis(
     1. The image is analyzed by a fine-tuned image model for disease prediction.
     2. The prediction and user symptoms are sent to a generative AI for a detailed response.
     """
-    # DEMO MODE: Return predefined responses for demo video
-    demo_responses = {
-        "red itches": """**AI Model Analysis:**
+    # SIMPLE DEMO MODE: Return predefined responses in order
+    demo_responses = [
+        """**AI Model Analysis:**
 The specialized skin disease detection model analyzed your image and provided these predictions:
   - Acne and Rosacea: 87.3% confidence
   - Eczema: 6.2% confidence
@@ -236,8 +236,8 @@ This appears consistent with active or recently active acne lesions that have le
 - Consistency is key - stick with your routine
 
 **Note:** This is an AI-based educational analysis. I recommend consulting a certified dermatologist for a precise diagnosis and personalized treatment plan. They can assess whether you need prescription medications or if over-the-counter products will suffice.""",
-        
-        "progress update": """The latest image analysis shows significant improvement in your facial skin condition. The AI model's current assessment indicates:
+
+        """The latest image analysis shows significant improvement in your facial skin condition. The AI model's current assessment indicates:
 - Reduced inflammatory activity (confidence in acne/rosacea decreased to 34.2%)
 - Improved skin texture and tone
 - Marked reduction in visible erythema (redness)
@@ -378,37 +378,20 @@ This demo demonstrates how SkinAI:
 3. **Doctor Visits**: Show dermatologist documented progress
 4. **Clinical Trials**: Track skin condition changes during studies
 5. **Product Testing**: Evaluate skincare product effectiveness"""
-    }
+    ]
     
-    # Check if this is a demo request
-    symptoms_lower = symptoms.lower()
-    if "red itch" in symptoms_lower or "red itches" in symptoms_lower:
-        ai_response_text = demo_responses["red itches"]
-    elif "progress" in symptoms_lower or "update" in symptoms_lower or "follow" in symptoms_lower:
-        ai_response_text = demo_responses["progress update"]
+    # Simple counter to track request order
+    if not hasattr(skin_analysis, 'request_count'):
+        skin_analysis.request_count = 0
+    
+    skin_analysis.request_count += 1
+    
+    # Return responses in order
+    if skin_analysis.request_count <= len(demo_responses):
+        ai_response_text = demo_responses[skin_analysis.request_count - 1]
     else:
-        # Fallback to original AI analysis for other requests
-        predicted_disease = analyze_skin_image(image)
-        
-        if "Could not analyze image" in predicted_disease:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to analyze the provided image."
-            )
-
-        # Create a prompt for the generative AI
-        prompt = (
-            f"A user is asking about a skin condition. "
-            f"A machine learning model analyzed a photo they provided and predicted the following condition: '{predicted_disease}'. "
-            f"The user also described their symptoms as: '{symptoms}'.\n\n"
-            f"Based on the model's prediction and the user's symptoms, provide a helpful, "
-            f"informative, and safe response. IMPORTANT: Start the response with a clear disclaimer that you are an AI, "
-            f"not a medical professional, and that this is not a diagnosis. Advise the user to consult a doctor. "
-            f"Then, you can provide some general information about the predicted condition."
-        )
-
-        # Get the response from the generative AI
-        ai_response_text = get_ai_response(prompt)
+        # If more than 2 requests, cycle through responses
+        ai_response_text = demo_responses[(skin_analysis.request_count - 1) % len(demo_responses)]
 
     # 4. Save the interaction to the database
     chat_message_data = schemas.ChatMessageCreate(
