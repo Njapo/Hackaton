@@ -623,7 +623,13 @@ function addMessage(text, sender, imageFile = null, isLoading = false) {
     
     const textDiv = document.createElement('div');
     textDiv.className = 'message-text';
-    textDiv.textContent = text;
+    
+    // Format the text with proper HTML
+    if (sender === 'assistant') {
+        textDiv.innerHTML = formatResponseText(text);
+    } else {
+        textDiv.textContent = text;
+    }
     
     content.appendChild(textDiv);
     
@@ -654,6 +660,55 @@ function addMessage(text, sender, imageFile = null, isLoading = false) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
     return messageDiv;
+}
+
+function formatResponseText(text) {
+    // Convert markdown-like formatting to HTML
+    let html = text
+        // Convert **bold** to <strong>
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Convert *italic* to <em>
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Convert ## Headers to <h2>
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        // Convert ### Headers to <h3>
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        // Convert numbered lists
+        .replace(/^(\d+)\. (.*$)/gm, '<li><strong>$1.</strong> $2</li>')
+        // Convert bullet points
+        .replace(/^- (.*$)/gm, '<li>$1</li>')
+        // Convert checkmarks
+        .replace(/^- ✅ (.*$)/gm, '<li class="check-item">✅ $1</li>')
+        .replace(/^- ❌ (.*$)/gm, '<li class="cross-item">❌ $1</li>')
+        // Convert emojis with text
+        .replace(/^(\d+)\. 🧼 \*\*(.*?)\*\*/gm, '<li class="recommendation-item"><span class="emoji">🧼</span> <strong>$2</strong>')
+        .replace(/^(\d+)\. 🚫 \*\*(.*?)\*\*/gm, '<li class="recommendation-item"><span class="emoji">🚫</span> <strong>$2</strong>')
+        .replace(/^(\d+)\. 💧 \*\*(.*?)\*\*/gm, '<li class="recommendation-item"><span class="emoji">💧</span> <strong>$2</strong>')
+        .replace(/^(\d+)\. ☀️ \*\*(.*?)\*\*/gm, '<li class="recommendation-item"><span class="emoji">☀️</span> <strong>$2</strong>')
+        .replace(/^(\d+)\. 🧊 \*\*(.*?)\*\*/gm, '<li class="recommendation-item"><span class="emoji">🧊</span> <strong>$2</strong>')
+        .replace(/^(\d+)\. 📸 \*\*(.*?)\*\*/gm, '<li class="recommendation-item"><span class="emoji">📸</span> <strong>$2</strong>')
+        .replace(/^(\d+)\. 🩺 \*\*(.*?)\*\*/gm, '<li class="recommendation-item"><span class="emoji">🩺</span> <strong>$2</strong>')
+        // Convert confidence scores
+        .replace(/- (.*?): (\d+\.\d+)% confidence/g, '<div class="confidence-item"><span class="condition">$1</span><div class="confidence-bar"><div class="confidence-fill" style="width: $2%"></div><span class="confidence-text">$2%</span></div></div>')
+        // Convert progress indicators
+        .replace(/- 📈 Healing Score: (\d+\.\d+)% \(([^)]+)\)/g, '<div class="progress-item"><span class="progress-label">📈 Healing Score</span><div class="progress-bar"><div class="progress-fill" style="width: $1%"></div><span class="progress-text">$1%</span></div><span class="progress-description">$2</span></div>')
+        .replace(/- 📉 Disease Confidence: (\d+\.\d+)% → (\d+\.\d+)% \(([^)]+)\)/g, '<div class="progress-item"><span class="progress-label">📉 Disease Confidence</span><div class="progress-bar"><div class="progress-fill" style="width: $2%"></div><span class="progress-text">$2%</span></div><span class="progress-description">$1% → $2% ($3)</span></div>')
+        // Convert horizontal rules
+        .replace(/^---$/gm, '<hr>')
+        // Convert line breaks
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>');
+    
+    // Wrap in paragraphs
+    html = '<p>' + html + '</p>';
+    
+    // Wrap lists in ul tags
+    html = html.replace(/(<li.*?<\/li>)/gs, '<ul>$1</ul>');
+    
+    // Clean up nested ul tags
+    html = html.replace(/<\/ul>\s*<ul>/g, '');
+    
+    return html;
 }
 
 // Project Management Functions
