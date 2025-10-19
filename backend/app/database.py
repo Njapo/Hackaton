@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get database URL from environment variables
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./animalai.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./skinai.db")
 
 # Create SQLAlchemy engine
 # connect_args is only needed for SQLite to allow multiple threads
