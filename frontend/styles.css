@@ -641,6 +641,123 @@ body {
     padding: 16px 20px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     position: relative;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+    margin: 16px 0 8px 0;
+    font-weight: 600;
+}
+
+.message-content h1 {
+    font-size: 1.5rem;
+    color: #2c3e50;
+}
+
+.message-content h2 {
+    font-size: 1.3rem;
+    color: #34495e;
+}
+
+.message-content h3 {
+    font-size: 1.1rem;
+    color: #34495e;
+}
+
+.message-content strong {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.message-content ul,
+.message-content ol {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.message-content li {
+    margin: 6px 0;
+}
+
+.message-content p {
+    margin: 12px 0;
+}
+
+.message-content hr {
+    border: none;
+    border-top: 2px solid #e1e5e9;
+    margin: 24px 0;
+}
+
+.message-content code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.message-content pre {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 16px 0;
+}
+
+.message-content blockquote {
+    border-left: 4px solid #667eea;
+    padding-left: 16px;
+    margin: 16px 0;
+    font-style: italic;
+    color: #555;
+}
+
+/* Emoji styling */
+.message-content .emoji {
+    font-size: 1.2em;
+    margin-right: 4px;
+}
+
+/* Statistics boxes */
+.message-content .stats-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.message-content .stats-box h3 {
+    color: white;
+    margin-top: 0;
+}
+
+/* Progress indicators */
+.message-content .progress-indicator {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.message-content .progress-improving {
+    background: #d4edda;
+    color: #155724;
+}
+
+.message-content .progress-stable {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.message-content .progress-declining {
+    background: #f8d7da;
+    color: #721c24;
 }
 
 .message.user .message-content {
