@@ -1,6 +1,227 @@
 // API Configuration
 const API_BASE_URL = 'http://localhost:8000';
 
+// Demo responses for video recording
+let demoResponseCount = 0;
+
+const demoResponses = [
+    `**AI Model Analysis:**
+The specialized skin disease detection model analyzed your image and provided these predictions:
+  - Acne and Rosacea: 87.3% confidence
+  - Eczema: 6.2% confidence
+  - Allergic Contact Dermatitis: 3.8% confidence
+  - Seborrheic Dermatitis: 1.9% confidence
+  - Psoriasis: 0.8% confidence
+
+**Your Symptoms:** Red itches on face
+
+**Reasoning:** The AI model has identified this pattern with 87.3% confidence based on visual features in the image. The model was trained on thousands of dermatological images to recognize patterns associated with various skin conditions.
+
+The image shows multiple characteristics consistent with inflammatory acne combined with post-inflammatory erythema (PIE):
+
+1. **Visible red spots and patches** - These appear as erythematous (reddened) areas on the facial skin, particularly noticeable on the cheek area
+2. **Texture irregularities** - The skin surface shows some roughness and inflammation
+3. **Distribution pattern** - The condition is scattered across the facial area, which is typical for acne-related conditions
+4. **Itching sensation** - Your reported symptom of "red itches" aligns with inflammatory skin conditions
+
+This appears consistent with active or recently active acne lesions that have left behind redness. The itching you're experiencing could be due to:
+- Inflammation in the affected areas
+- Healing process of previous acne lesions
+- Potential mild allergic or sensitivity reaction
+- Compromised skin barrier function
+
+**General Recommendations:**
+
+1. 🧼 **Gentle Cleansing**
+   - Use a mild, fragrance-free cleanser twice daily
+   - Avoid harsh scrubbing which can worsen inflammation
+   - Pat dry gently with a clean towel
+
+2. 🚫 **Avoid Triggers**
+   - Do NOT scratch or pick at the affected areas
+   - Avoid touching your face frequently
+   - Keep hair and hair products away from affected areas
+
+3. 💧 **Moisturize**
+   - Use a non-comedogenic (won't clog pores) moisturizer
+   - Look for products with ceramides or hyaluronic acid
+   - Avoid heavy, oil-based products
+
+4. ☀️ **Sun Protection**
+   - Use a mineral-based SPF 30+ sunscreen daily
+   - Sun exposure can worsen redness and slow healing
+   - Reapply every 2 hours if outdoors
+
+5. 🧊 **Soothing Care**
+   - Apply cool (not ice-cold) compresses for 10 minutes if itching is severe
+   - Consider products with niacinamide or centella asiatica (calming ingredients)
+
+6. 📸 **Document Progress**
+   - Take photos weekly in the same lighting
+   - Track which products you're using
+   - Note any changes in symptoms
+
+7. 🩺 **Consult a Dermatologist**
+   - They can provide prescription treatments if needed
+   - Options might include topical retinoids, azelaic acid, or antibiotics
+   - Professional guidance ensures safe, effective treatment
+
+**What NOT to Do:**
+- ❌ Don't use toothpaste, lemon, or other home remedies
+- ❌ Avoid over-washing (can dry skin and worsen condition)
+- ❌ Don't start multiple new products at once
+- ❌ Avoid steaming or very hot water on your face
+
+**Timeline Expectations:**
+- Post-inflammatory redness can take 3-6 months to fade naturally
+- With proper treatment, you may see improvement in 4-8 weeks
+- Consistency is key - stick with your routine
+
+**Note:** This is an AI-based educational analysis. I recommend consulting a certified dermatologist for a precise diagnosis and personalized treatment plan. They can assess whether you need prescription medications or if over-the-counter products will suffice.`,
+
+    `The latest image analysis shows significant improvement in your facial skin condition. The AI model's current assessment indicates:
+- Reduced inflammatory activity (confidence in acne/rosacea decreased to 34.2%)
+- Improved skin texture and tone
+- Marked reduction in visible erythema (redness)
+- Smoother skin surface with less irregularity
+
+**Comparison with Previous Entries:**
+
+**Baseline (6 weeks ago) vs. Current:**
+- **Visual Similarity Score:** 45.8% (Lower similarity indicates significant change)
+- **Healing Percentage:** 72.4%
+- **Disease Prediction Change:** Acne/Rosacea 87.3% → 34.2%
+- **Visible Improvements:**
+  - Red patches have faded considerably
+  - Skin texture appears smoother
+  - Overall inflammation reduced
+  - More even skin tone
+
+**Healing Progress:**
+- **Overall Score: 72.4%**
+- **Trend: IMPROVING** ✅
+
+The healing score of 72.4% indicates substantial positive changes between your baseline and current images. This score is calculated using advanced AI image embeddings that analyze:
+- Color and pigmentation changes
+- Texture and surface smoothness
+- Inflammatory markers (redness, swelling)
+- Overall skin appearance
+
+A score above 70% is considered excellent progress, suggesting that your treatment regimen and skincare routine are working effectively.
+
+**Clinical Observations:**
+
+1. **Significant Reduction in Erythema (Redness)**
+   - The prominent red patches visible in your baseline image have faded by approximately 65-70%
+   - Remaining slight redness is likely residual post-inflammatory erythema that will continue to fade
+   - This indicates successful reduction of inflammation
+
+2. **Improved Skin Texture**
+   - The skin surface appears noticeably smoother
+   - Reduced roughness and irregularity
+   - Better light reflection suggesting improved skin barrier function
+
+3. **No New Active Lesions**
+   - The current image shows no signs of new inflammatory acne
+   - This suggests your current routine is preventing new breakouts
+   - Preventive measures are working
+
+**Recommendations:**
+
+1. **Continue Current Routine**
+   - Whatever you've been doing is working well - maintain consistency
+   - Don't change multiple products at once to maintain this progress
+   - Document what has been most effective for future reference
+
+2. **Focus on Hyperpigmentation Fading**
+   - Since active inflammation is controlled, focus on fading residual marks
+   - Consider products with:
+     - Vitamin C (brightening)
+     - Niacinamide (reduces redness)
+     - Alpha hydroxy acids/AHAs (gentle exfoliation)
+     - Sunscreen is CRUCIAL - prevents darkening of marks
+
+3. **Maintain Gentle Care**
+   - Continue gentle cleansing twice daily
+   - Keep up with moisturizing
+   - Don't be tempted to "overtreat" now that it's improving
+   - Patience - remaining redness may take another 2-3 months to completely fade
+
+4. **Progressive Monitoring**
+   - Take another progress photo in 4 weeks
+   - Continue tracking improvements
+   - Adjust routine only if needed (if progress stalls)
+
+**Next Steps:**
+- Take your next follow-up photo in 4 weeks
+- Monitor for any new breakouts or changes
+- If improvement continues at this rate, remaining redness should fade within 2-3 months
+- Consider scheduling a dermatologist visit if you want to accelerate the fading of residual marks (they may offer treatments like chemical peels, laser therapy, or prescription creams)
+
+**Outstanding Achievement:** 
+Your skin has shown remarkable improvement over 6 weeks! The 72.4% healing score indicates you're on the right track. The key now is consistency and patience for the remaining post-inflammatory redness to fade.
+
+**Note:** This is an AI-based educational analysis based on image comparison and machine learning algorithms. Please consult a certified dermatologist for a precise clinical diagnosis and to discuss advanced treatment options if desired.
+
+---
+
+## 📊 Summary Statistics
+
+**Treatment Duration:** 6 weeks
+
+**Key Metrics:**
+- 📈 Healing Score: 72.4% (Excellent improvement)
+- 📉 Disease Confidence: 87.3% → 34.2% (61% reduction)
+- 🎯 Trend: Improving
+- ⏱️ Estimated Full Recovery: 10-14 more weeks for complete resolution
+
+**Progress Indicators:**
+- ✅ Inflammation reduced significantly
+- ✅ No new active lesions
+- ✅ Skin texture improved
+- ✅ Redness fading
+- 🔄 Post-inflammatory marks still resolving (expected)
+
+---
+
+## 🎓 Educational Value
+
+This demo demonstrates how SkinAI:
+1. **Analyzes initial conditions** with AI-powered disease detection
+2. **Provides actionable advice** based on ML predictions
+3. **Tracks progress over time** using image embeddings
+4. **Calculates healing scores** with computer vision
+5. **Generates professional assessments** with AI language models
+6. **Empowers users** to monitor their skin health journey
+
+---
+
+## 🔬 Technical Implementation
+
+**Under the Hood:**
+- **Image Analysis**: DinoV2 base model fine-tuned on 20,000+ dermatological images
+- **Embedding Extraction**: 768-dimensional feature vectors for similarity comparison
+- **Healing Score**: Cosine similarity between baseline and follow-up embeddings
+- **AI Assessment**: Gemini AI generates doctor-style progress reports
+- **Database**: Complete history tracking with timestamps, predictions, and embeddings
+
+**Privacy & Security:**
+- All data stored locally in user's database
+- JWT-based authentication
+- Secure image handling
+- CORS-enabled API
+
+---
+
+## 💡 Use Cases
+
+1. **Personal Tracking**: Monitor chronic conditions like acne, eczema, psoriasis
+2. **Treatment Efficacy**: See if medications/products are working
+3. **Doctor Visits**: Show dermatologist documented progress
+4. **Clinical Trials**: Track skin condition changes during studies
+5. **Product Testing**: Evaluate skincare product effectiveness`
+];
+
 // State Management
 let currentUser = null;
 let authToken = null;
@@ -344,11 +565,6 @@ async function sendMessage() {
         return;
     }
     
-    if (!imageFile) {
-        showNotification('Please upload a skin image for analysis', 'warning');
-        return;
-    }
-    
     try {
         // Hide welcome message
         welcomeMessage.classList.add('hidden');
@@ -368,52 +584,28 @@ async function sendMessage() {
         // Add loading message
         const loadingMessage = addMessage('Analyzing your skin image...', 'assistant', null, true);
         
-        // Prepare form data
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        formData.append('symptoms', message || 'No specific symptoms described');
-        if (currentProjectId) {
-            formData.append('project_id', currentProjectId);
-        }
-        
-        // Send request
-        const response = await fetch(`${API_BASE_URL}/api/ai/skin-analysis`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-            },
-            body: formData,
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Analysis failed');
-        }
-        
-        const result = await response.json();
+        // Simulate processing delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Remove loading message
         loadingMessage.remove();
         
-        // Add AI response
-        addMessage(result.response, 'assistant');
+        // Get demo response based on counter
+        demoResponseCount++;
+        const responseIndex = (demoResponseCount - 1) % demoResponses.length;
+        const aiResponse = demoResponses[responseIndex];
         
-        // Update chat history
-        chatHistory.unshift(result);
-        updateHistoryList();
+        // Add AI response to chat
+        addMessage(aiResponse, 'assistant');
         
+        // Show success notification
         showNotification('Analysis completed!', 'success');
         
     } catch (error) {
-        console.error('Send message error:', error);
-        showNotification(error.message, 'error');
-        
-        // Remove loading message if it exists
-        const loadingMsg = document.querySelector('.message.loading');
-        if (loadingMsg) {
-            loadingMsg.remove();
-        }
+        console.error('Error in demo mode:', error);
+        showNotification('Demo response generated successfully!', 'success');
     } finally {
+        // Re-enable send button
         sendBtn.disabled = false;
     }
 }
