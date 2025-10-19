@@ -50,9 +50,9 @@ app.add_middleware(
 async def startup_event():
     """Initialize database on startup."""
     init_db()
-    print("✅ Database initialized")
-    print("🚀 SkinAI API is running!")
-    print(f"📚 API Documentation: http://localhost:8000/docs")
+    print("Database initialized")
+    print("SkinAI API is running!")
+    print(f"API Documentation: http://localhost:8000/docs")
 
 
 # ============= Root Endpoint =============
@@ -152,6 +152,7 @@ async def get_current_user_info(
 async def skin_analysis(
     image: UploadFile = File(...),
     symptoms: str = Form(...),
+    project_id: int = Form(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):

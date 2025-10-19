@@ -49,6 +49,34 @@ class User(UserInDB):
     pass
 
 
+# ============= Project Schemas =============
+
+class ProjectBase(BaseModel):
+    """Base schema for Project."""
+    title: str = Field(..., min_length=1, max_length=200, description="Project/disease title")
+    description: str = Field(..., min_length=1, description="Project description")
+
+
+class ProjectCreate(ProjectBase):
+    """Schema for creating a new project."""
+    pass
+
+
+class ProjectInDB(ProjectBase):
+    """Schema for Project as stored in database."""
+    id: int
+    owner_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class Project(ProjectInDB):
+    """Schema for Project in API responses."""
+    pass
+
+
 # ============= Chat Message Schemas =============
 
 class ChatMessageBase(BaseModel):
@@ -59,12 +87,14 @@ class ChatMessageBase(BaseModel):
 class ChatMessageCreate(ChatMessageBase):
     """Schema for creating a new chat message."""
     response: str = Field(..., description="AI's generated response")
+    project_id: Optional[int] = Field(None, description="Associated project ID")
 
 
 class ChatMessageInDB(ChatMessageBase):
     """Schema for ChatMessage as stored in database."""
     id: int
     owner_id: int
+    project_id: Optional[int]
     response: str
     created_at: datetime
 
@@ -108,6 +138,18 @@ class ErrorResponse(BaseModel):
     """Error response schema."""
     error: str
     detail: Optional[str] = None
+
+
+class SummarizeRequest(BaseModel):
+    """Schema for progress summary request."""
+    project_id: int = Field(..., description="Project ID to summarize")
+    project_title: str = Field(..., description="Project title")
+    project_description: str = Field(..., description="Project description")
+
+
+class SummarizeResponse(BaseModel):
+    """Schema for progress summary response."""
+    summary: str = Field(..., description="Generated progress summary")
 
 
 # ============= AI Chat Schemas =============

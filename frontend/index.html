@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkinAI Chatbot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="loading-screen">
+            <div class="loading-spinner"></div>
+            <p>Loading SkinAI...</p>
+        </div>
+
+        <!-- Authentication Screen -->
+        <div id="auth-screen" class="auth-screen hidden">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <div class="logo">
+                        <i class="fas fa-user-md"></i>
+                        <h1>SkinAI</h1>
+                    </div>
+                    <p>AI-powered skin health analysis</p>
+                </div>
+
+                <!-- Login Form -->
+                <div id="login-form" class="auth-form">
+                    <h2>Welcome Back</h2>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="loginEmail">Email</label>
+                            <input type="email" id="loginEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginPassword">Password</label>
+                            <input type="password" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Sign In
+                        </button>
+                    </form>
+                    <p class="auth-switch">
+                        Don't have an account? 
+                        <a href="#" id="showRegister">Sign up</a>
+                    </p>
+                </div>
+
+                <!-- Register Form -->
+                <div id="register-form" class="auth-form hidden">
+                    <h2>Create Account</h2>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label for="registerName">Full Name</label>
+                            <input type="text" id="registerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="registerEmail">Email</label>
+                            <input type="email" id="registerEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Password</label>
+                            <input type="password" id="registerPassword" required minlength="8">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            Create Account
+                        </button>
+                    </form>
+                    <p class="auth-switch">
+                        Already have an account? 
+                        <a href="#" id="showLogin">Sign in</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Interface -->
+        <div id="chat-screen" class="chat-screen hidden">
+            <!-- Left Sidebar -->
+            <div id="left-sidebar" class="left-sidebar">
+                <!-- Sidebar Header -->
+                <div class="sidebar-header">
+                    <button id="newProjectBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        New Disease
+                    </button>
+                </div>
+
+                <!-- Projects Section -->
+                <div class="projects-section">
+                    <h3>Diseases & Conditions</h3>
+                    <div id="projectsList" class="projects-list">
+                        <!-- Projects will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Chat History Section -->
+                <div class="history-section">
+                    <h3>Recent Chats</h3>
+                    <div id="historyList" class="history-list">
+                        <!-- History items will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Sidebar Footer -->
+                <div class="sidebar-footer">
+                    <button id="logoutBtn" class="btn btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Chat Area -->
+            <div class="main-content">
+                <!-- Header -->
+                <header class="chat-header">
+                    <div class="header-left">
+                        <div class="current-project">
+                            <h2 id="currentProjectTitle">SkinAI Assistant</h2>
+                            <p id="currentProjectDescription">General skin health consultation</p>
+                        </div>
+                    </div>
+                    <div class="header-right">
+                        <button id="summarizeProgressBtn" class="btn btn-secondary hidden">
+                            <i class="fas fa-chart-line"></i>
+                            Summarize Progress
+                        </button>
+                        <button id="toggleSidebar" class="btn btn-secondary">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Chat Container -->
+                <div class="chat-container">
+                    <!-- Welcome Message -->
+                    <div id="welcome-message" class="welcome-message">
+                        <div class="welcome-content">
+                            <i class="fas fa-user-md"></i>
+                            <h2>Welcome to SkinAI</h2>
+                            <p>Upload a skin image and describe your symptoms for AI-powered analysis</p>
+                            <div class="features">
+                                <div class="feature">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Image Analysis</span>
+                                </div>
+                                <div class="feature">
+                                    <i class="fas fa-brain"></i>
+                                    <span>AI Diagnosis</span>
+                                </div>
+                                <div class="feature">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <span>Privacy Protected</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- Messages will be populated here -->
+                    </div>
+
+                    <!-- Message Input -->
+                    <div class="message-input-container">
+                        <div class="message-input">
+                            <div class="input-group">
+                                <input type="file" id="imageInput" accept="image/*" class="file-input">
+                                <label for="imageInput" class="file-label">
+                                    <i class="fas fa-camera"></i>
+                                </label>
+                                <input type="text" id="messageInput" placeholder="Describe your symptoms..." class="text-input">
+                                <button id="sendBtn" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div id="imagePreview" class="image-preview hidden">
+                                <img id="previewImg" src="" alt="Preview">
+                                <button id="removeImage" class="btn btn-icon">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Disease Modal -->
+        <div id="newDiseaseModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Create New Disease/Condition</h3>
+                    <button id="closeModal" class="btn btn-icon">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="newDiseaseForm">
+                        <div class="form-group">
+                            <label for="diseaseTitle">Disease/Condition Name</label>
+                            <input type="text" id="diseaseTitle" placeholder="e.g., Acne Treatment, Eczema Management" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="diseaseDescription">Description</label>
+                            <textarea id="diseaseDescription" placeholder="Describe the condition, symptoms, or treatment goals..." rows="4" required></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="cancelDisease" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create Disease</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error/Success Messages -->
+        <div id="notification" class="notification hidden">
+            <div class="notification-content">
+                <i id="notificationIcon" class="fas fa-info-circle"></i>
+                <span id="notificationText"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
