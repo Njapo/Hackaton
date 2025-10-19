@@ -50,9 +50,9 @@ app.add_middleware(
 async def startup_event():
     """Initialize database on startup."""
     init_db()
-    print("✅ Database initialized")
-    print("🚀 SkinAI API is running!")
-    print(f"📚 API Documentation: http://localhost:8000/docs")
+    print("Database initialized")
+    print("SkinAI API is running!")
+    print(f"API Documentation: http://localhost:8000/docs")
 
 
 # ============= Root Endpoint =============
