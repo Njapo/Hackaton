@@ -224,40 +224,54 @@ def compute_comparisons(
     Returns:
         Tuple of (comparisons list, average healing score)
     """
-    if not current_entry.dino_embedding:
+    # Check if current entry has embedding
+    current_embedding = current_entry.dino_embedding
+    if current_embedding is None or (isinstance(current_embedding, list) and len(current_embedding) == 0):
         return [], 0.0
+    
+    # Ensure current_embedding is a list
+    if not isinstance(current_embedding, list):
+        current_embedding = list(current_embedding)
     
     comparisons = []
     healing_scores = []
     
     for prev_entry in previous_entries:
-        if not prev_entry.dino_embedding:
+        # Check if previous entry has embedding
+        prev_embedding = prev_entry.dino_embedding
+        if prev_embedding is None or (isinstance(prev_embedding, list) and len(prev_embedding) == 0):
             continue
         
-        similarity = cosine_similarity(
-            current_entry.dino_embedding,
-            prev_entry.dino_embedding
-        )
+        # Ensure prev_embedding is a list
+        if not isinstance(prev_embedding, list):
+            prev_embedding = list(prev_embedding)
         
-        # Lower similarity typically means improvement (lesion changing/healing)
-        healing_score = compute_healing_score(
-            current_entry.dino_embedding,
-            prev_entry.dino_embedding,
-            higher_similarity_means_better=False
-        )
-        
-        healing_scores.append(healing_score)
-        
-        prev_top_disease = prev_entry.disease_predictions[0]['disease'] if prev_entry.disease_predictions else 'Unknown'
-        
-        comparisons.append({
-            'previous_entry_id': prev_entry.id,
-            'previous_timestamp': prev_entry.timestamp,
-            'previous_top_disease': prev_top_disease,
-            'current_similarity': similarity,
-            'healing_percentage': healing_score
-        })
+        try:
+            similarity = cosine_similarity(current_embedding, prev_embedding)
+            
+            # Lower similarity typically means improvement (lesion changing/healing)
+            healing_score = compute_healing_score(
+                current_embedding,
+                prev_embedding,
+                higher_similarity_means_better=False
+            )
+            
+            healing_scores.append(healing_score)
+            
+            prev_top_disease = prev_entry.disease_predictions[0]['disease'] if prev_entry.disease_predictions else 'Unknown'
+            
+            comparisons.append({
+                'previous_entry_id': prev_entry.id,
+                'previous_timestamp': prev_entry.timestamp,
+                'previous_top_disease': prev_top_disease,
+                'current_similarity': float(similarity),
+                'healing_percentage': float(healing_score)
+            })
+        except Exception as e:
+            # Skip this comparison if there's an error
+            print(f"Warning: Failed to compare with entry {prev_entry.id}: {e}")
+            continue
     
-    average_healing_score = np.mean(healing_scores) if healing_scores else 0.0
+    average_healing_score = float(np.mean(healing_scores)) if healing_scores else 0.0
     
-    return comparisons, float(average_healing_score)
+    return comparisons, average_healing_score
