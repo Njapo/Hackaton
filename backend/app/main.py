@@ -10,14 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
-from typing import List
+from typing import List, Optional
 import os
 from dotenv import load_dotenv
 
 from . import models, schemas, crud, auth
 from .database import engine, get_db, init_db
 from .ai_client import get_ai_response
-from .skin_analyzer import analyze_skin_image, analyze_skin_image_with_confidence
+from .skin_analyzer import analyze_skin_image, analyze_skin_image_with_confidence, analyze_and_extract
 
 # Load environment variables
 load_dotenv()
@@ -286,6 +286,426 @@ def get_user_history(
 ):
     """Get the current user's chat history."""
     return crud.get_user_chat_messages(db, user_id=current_user.id)
+
+
+# ============= Lesion Section Endpoints =============
+
+@app.post("/api/sections/create", response_model=schemas.LesionSectionResponse, tags=["Lesion Sections"])
+async def create_section(
+    section: schemas.LesionSectionCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Create a new lesion section for organizing different skin conditions.
+    
+    Lesion sections allow users to track multiple skin conditions separately.
+    For example: "Facial acne", "Left arm rash", "Scalp condition", etc.
+    
+    Each section gets a unique UUID identifier and can have multiple history entries.
+    """
+    return crud.create_lesion_section(
+        db, current_user.id, section.section_name, section.description
+    )
+
+
+@app.get("/api/sections", response_model=List[schemas.LesionSectionResponse], tags=["Lesion Sections"])
+async def get_sections(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Get all lesion sections for the current user.
+    
+    Returns a list of all sections with their metadata including:
+    - section_id (UUID)
+    - section_name
+    - description
+    - created_at timestamp
+    """
+    return crud.get_user_sections(db, current_user.id)
+
+
+@app.get("/api/sections/{section_id}", response_model=schemas.LesionSectionResponse, tags=["Lesion Sections"])
+async def get_section(
+    section_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Get details of a specific lesion section.
+    
+    Verifies that the section belongs to the current user.
+    """
+    section = crud.get_section_by_id(db, section_id)
+    if not section or section.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Section not found")
+    return section
+
+
+@app.put("/api/sections/{section_id}", response_model=schemas.LesionSectionResponse, tags=["Lesion Sections"])
+async def update_section(
+    section_id: str,
+    section_update: schemas.LesionSectionUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Update a lesion section's name or description.
+    
+    Only the section owner can update it.
+    """
+    section = crud.get_section_by_id(db, section_id)
+    if not section or section.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Section not found")
+    
+    return crud.update_lesion_section(db, section_id, section_update)
+
+
+@app.delete("/api/sections/{section_id}", tags=["Lesion Sections"])
+async def delete_section(
+    section_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Delete a lesion section and all its history entries.
+    
+    ⚠️ Warning: This will permanently delete all analysis history associated with this section!
+    """
+    section = crud.get_section_by_id(db, section_id)
+    if not section or section.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Section not found")
+    
+    success = crud.delete_lesion_section(db, section_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete section")
+    
+    return {"message": "Section deleted successfully", "section_id": section_id}
+
+
+# ============= Enhanced Analysis with Auto-Save =============
+
+@app.post("/api/ai/analyze", tags=["AI"])
+async def analyze_with_auto_save(
+    image: UploadFile = File(..., description="Skin image to analyze"),
+    section_id: Optional[str] = Form(None, description="UUID of the lesion section (optional)"),
+    user_notes: Optional[str] = Form(None, description="User's notes about this entry"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Analyze image with DinoV2 model and automatically save to history.
+    
+    This endpoint:
+    1. Extracts 768-dimensional embeddings from the image using DinoV2
+    2. Predicts the top 5 possible skin conditions with confidence scores
+    3. Automatically saves the analysis to the user's history
+    4. Links to a lesion section if section_id is provided
+    5. **Automatically detects if this is the first upload (baseline)**
+    
+    **Auto-Baseline Detection:**
+    - If this is the FIRST upload for a section → automatically marks as baseline
+    - All subsequent uploads → automatically marked as follow-ups
+    - No need to manually set is_baseline!
+    
+    **Auto-Save Features:**
+    - Every analysis is saved automatically
+    - Embeddings stored for future similarity comparisons
+    - Can be linked to a specific lesion section for tracking
+    - Automatic baseline marking for first upload
+    
+    **Returns:** 
+    - history_id: ID of the saved history entry
+    - predictions: Top 5 disease predictions with confidence scores
+    - embedding_extracted: Whether embedding was successfully extracted
+    - section_id: The section this entry belongs to (if provided)
+    - is_baseline: Whether this was marked as baseline (auto-detected)
+    """
+    from app.skin_analyzer import analyze_and_extract
+    
+    # Verify section exists and belongs to user if provided
+    if section_id:
+        section = crud.get_section_by_id(db, section_id)
+        if not section or section.user_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Section not found")
+        
+        # AUTOMATIC BASELINE DETECTION
+        # Check if this section already has any entries
+        existing_entries = crud.get_section_history(db, section_id, skip=0, limit=1)
+        is_baseline = len(existing_entries) == 0  # True if first upload, False otherwise
+    else:
+        # No section provided, not a baseline
+        is_baseline = False
+    
+    # Extract predictions and embedding
+    try:
+        predictions, embedding = analyze_and_extract(image)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze image: {str(e)}"
+        )
+    
+    if predictions[0]["disease"] == "Could not analyze image":
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to analyze the provided image."
+        )
+    
+    # For now, use a placeholder for image path (in production, implement proper file storage)
+    import uuid
+    image_filename = f"{uuid.uuid4()}_{image.filename}"
+    image_path = f"/uploads/{image_filename}"
+    # TODO: Implement actual file saving logic here
+    # Example: await save_upload_file(image, image_path)
+    
+    # Save to history automatically
+    try:
+        history_entry = crud.save_history_entry_enhanced(
+            db=db,
+            user_id=current_user.id,
+            image_path=image_path,
+            predictions=predictions,
+            embedding=embedding,
+            section_id=section_id,
+            gemini_response=None,  # Will be generated during progress review
+            is_baseline=is_baseline,
+            user_notes=user_notes
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save history entry: {str(e)}"
+        )
+    
+    return {
+        "success": True,
+        "history_id": history_entry.id,
+        "predictions": predictions,
+        "embedding_extracted": embedding is not None,
+        "embedding_dimensions": len(embedding) if embedding else 0,
+        "section_id": section_id,
+        "is_baseline": is_baseline,
+        "message": "Analysis completed and saved to history successfully",
+        "timestamp": history_entry.timestamp.isoformat()
+    }
+
+
+# ============= Progress Review Endpoint =============
+
+@app.post("/api/sections/{section_id}/progress-review", tags=["Progress Tracking"])
+async def progress_review(
+    section_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    🩺 Generate AI doctor-style progress assessment for a lesion section.
+    
+    **SIMPLE TO USE:** Just provide section_id - we automatically:
+    - Get the LATEST (most recent) entry in this section
+    - Compare it with ALL previous entries
+    - Calculate healing scores using image embeddings
+    - Generate doctor-style AI assessment via Gemini
+    
+    **How it works:**
+    1. **Finds latest entry** - Automatically gets your most recent upload
+    2. **Compares with history** - Analyzes ALL previous images in this section
+    3. **Calculates healing scores** - Uses AI image embeddings (768-dim DinoV2 vectors)
+    4. **Computes trend** - Determines if improving/stable/worsening
+    5. **Generates report** - Doctor-style assessment from Gemini AI
+    
+    **Healing Score Explanation:**
+    - 90-100%: Very similar to previous (minimal change)
+    - 70-89%: Similar with minor differences
+    - 50-69%: Moderate changes visible
+    - Below 50%: Significant changes detected
+    
+    **Trend Detection:**
+    - "improving": Healing scores increasing over time
+    - "stable": Consistent condition
+    - "worsening": Healing scores decreasing
+    
+    **When to use:**
+    - After uploading a new follow-up image
+    - To check treatment progress
+    - To see how condition changed over time
+    
+    **Example Response:**
+    ```json
+    {
+      "section_name": "Facial Acne",
+      "latest_entry_date": "2025-10-19",
+      "baseline_date": "2025-10-01",
+      "comparisons": [
+        {
+          "previous_date": "2025-10-12",
+          "healing_percentage": 78.5,
+          "days_difference": 7
+        }
+      ],
+      "average_healing_score": 78.5,
+      "trend": "improving",
+      "doctor_summary": "Based on image analysis, your condition shows improvement..."
+    }
+    ```
+    """
+    from app.progress_analyzer import (
+        compute_comparisons, analyze_trend, generate_progress_prompt
+    )
+    
+    # Get section and verify ownership
+    section = crud.get_section_by_id(db, section_id)
+    if not section or section.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Section not found")
+    
+    # Get ALL entries for this section, ordered by timestamp DESC (latest first)
+    all_entries = crud.get_section_history(db, section_id, skip=0, limit=100)
+    
+    if len(all_entries) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Not enough history. Section has {len(all_entries)} entry/entries. Need at least 2 to compare progress."
+        )
+    
+    # Latest entry is the first one (most recent)
+    current_entry = all_entries[0]
+    
+    # All previous entries (everything except the latest)
+    previous_entries = all_entries[1:]
+    
+    # Compute comparisons and healing scores
+    try:
+        comparisons, avg_healing_score = compute_comparisons(current_entry, previous_entries)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to compute comparisons: {str(e)}"
+        )
+    
+    # Analyze trend
+    healing_scores = [comp['healing_percentage'] for comp in comparisons]
+    trend = analyze_trend(healing_scores) if healing_scores else 'stable'
+    
+    # Generate Gemini prompt
+    try:
+        prompt = generate_progress_prompt(
+            current_entry,
+            previous_entries,
+            comparisons,
+            avg_healing_score,
+            trend,
+            section.section_name
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate prompt: {str(e)}"
+        )
+    
+    # Get doctor-style assessment from Gemini
+    try:
+        gemini_response = get_ai_response(prompt)
+        doctor_summary = gemini_response.get("response", "Unable to generate assessment")
+    except Exception as e:
+        # Fallback if Gemini fails
+        doctor_summary = (
+            f"**Progress Analysis for {section.section_name}**\n\n"
+            f"Average healing score: {avg_healing_score:.1f}%\n"
+            f"Trend: {trend}\n\n"
+            f"Based on image similarity analysis, your condition appears to be {trend}.\n\n"
+            f"Note: AI assessment temporarily unavailable. Scores based on image embedding comparison."
+        )
+    
+    # Update the latest history entry with Gemini response and healing score
+    try:
+        crud.update_history_gemini_response(
+            db, current_entry.id, doctor_summary, avg_healing_score
+        )
+    except Exception as e:
+        # Non-fatal error, continue with response
+        pass
+    
+    # Get baseline entry
+    baseline = crud.get_baseline_entry(db, section_id)
+    
+    return {
+        "section_id": section_id,
+        "section_name": section.section_name,
+        "latest_entry_id": current_entry.id,
+        "latest_entry_date": current_entry.timestamp.isoformat(),
+        "baseline_entry_id": baseline.id if baseline else None,
+        "baseline_date": baseline.timestamp.isoformat() if baseline else None,
+        "total_entries": len(all_entries),
+        "comparisons": comparisons,
+        "average_healing_score": avg_healing_score,
+        "doctor_summary": doctor_summary,
+        "trend": trend
+    }
+
+
+# ============= Section History Endpoint =============
+
+@app.get("/api/sections/{section_id}/history", tags=["Progress Tracking"])
+async def get_section_history_endpoint(
+    section_id: str,
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Get all history entries for a specific lesion section.
+    
+    Returns chronological list of all analysis entries for tracking progress over time.
+    
+    **Each entry includes:**
+    - Entry ID and timestamp
+    - Top disease prediction with confidence score
+    - Healing score (if available from progress review)
+    - Image path
+    - Whether it's marked as baseline
+    
+    **Use Cases:**
+    - View timeline of condition progress
+    - See all analysis results for a specific skin area
+    - Track healing scores over time
+    - Identify baseline and follow-up entries
+    
+    **Pagination:**
+    - skip: Number of entries to skip (default: 0)
+    - limit: Maximum entries to return (default: 50)
+    """
+    # Verify section belongs to user
+    section = crud.get_section_by_id(db, section_id)
+    if not section or section.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Section not found")
+    
+    entries = crud.get_section_history(db, section_id, skip, limit)
+    
+    # Transform to summary format
+    summaries = []
+    for entry in entries:
+        top_pred = entry.disease_predictions[0] if entry.disease_predictions else {}
+        summaries.append({
+            "id": entry.id,
+            "timestamp": entry.timestamp.isoformat(),
+            "top_prediction": top_pred.get("disease", "Unknown"),
+            "top_confidence": top_pred.get("confidence", 0),
+            "healing_score": entry.healing_score,
+            "image_path": entry.image_path,
+            "is_baseline": entry.is_baseline,
+            "has_gemini_response": entry.gemini_response is not None,
+            "user_notes": entry.user_notes
+        })
+    
+    return {
+        "section_id": section_id,
+        "section_name": section.section_name,
+        "total_entries": len(summaries),
+        "entries": summaries
+    }
 
 
 # ============= Run Application =============

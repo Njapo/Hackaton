@@ -84,3 +84,81 @@ def analyze_skin_image_with_confidence(image_file, top_k=5):
     except Exception as e:
         print(f"Error analyzing image: {e}")
         return [{"disease": "Could not analyze image", "confidence": 0.0}]
+
+
+def get_image_embedding(image_file, normalize=True):
+    """
+    Extract the 768-dimensional embedding vector from DinoV2 model.
+    
+    This embedding can be used for:
+    - Similarity comparison between images
+    - Tracking healing progress over time
+    - Finding similar historical cases
+    
+    Args:
+        image_file: The image file uploaded by the user
+        normalize: Whether to normalize the embedding vector (default: True)
+        
+    Returns:
+        List of 768 float values representing the image embedding,
+        or None if extraction fails
+    """
+    try:
+        # Open the image
+        image = Image.open(image_file.file).convert("RGB")
+        
+        # Process the image and get model inputs
+        inputs = processor(images=image, return_tensors="pt")
+        
+        # Get the model's prediction with hidden states
+        with torch.no_grad():
+            outputs = model(**inputs, output_hidden_states=True)
+            
+            # Extract the embedding from the last hidden state
+            # For ViT-based models like DinoV2, we can use the CLS token (first token)
+            # or average all tokens. Using CLS token:
+            hidden_states = outputs.hidden_states[-1]  # Last layer
+            cls_embedding = hidden_states[:, 0, :].squeeze()  # CLS token
+            
+            # Alternatively, you could use average pooling:
+            # embedding = hidden_states.mean(dim=1).squeeze()
+        
+        # Convert to list
+        embedding = cls_embedding.tolist()
+        
+        # Normalize if requested (recommended for cosine similarity)
+        if normalize:
+            norm = torch.norm(cls_embedding).item()
+            if norm > 0:
+                embedding = [x / norm for x in embedding]
+        
+        return embedding
+        
+    except Exception as e:
+        print(f"Error extracting embedding: {e}")
+        return None
+
+
+def analyze_and_extract(image_file):
+    """
+    Convenience function that both analyzes the image and extracts embedding.
+    
+    Args:
+        image_file: The image file uploaded by the user
+        
+    Returns:
+        Tuple of (predictions list, embedding list) or (None, None) on error
+    """
+    try:
+        # Need to reset file pointer since we'll read it twice
+        image_file.file.seek(0)
+        predictions = analyze_skin_image_with_confidence(image_file, top_k=5)
+        
+        image_file.file.seek(0)
+        embedding = get_image_embedding(image_file, normalize=True)
+        
+        return predictions, embedding
+    
+    except Exception as e:
+        print(f"Error in analyze_and_extract: {e}")
+        return None, None

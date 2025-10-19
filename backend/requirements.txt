@@ -12,3 +12,10 @@ transformers
 torch
 Pillow
 timm
+
+# PostgreSQL support
+psycopg2-binary==2.9.9
+pgvector==0.2.4
+
+# Database migrations
+alembic==1.13.1
