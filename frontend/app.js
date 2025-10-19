@@ -5,6 +5,9 @@ const API_BASE_URL = 'http://localhost:8000';
 let currentUser = null;
 let authToken = null;
 let chatHistory = [];
+let projects = [];
+let currentProject = null;
+let currentProjectId = null;
 
 // DOM Elements
 const loadingScreen = document.getElementById('loading-screen');
@@ -17,10 +20,19 @@ const registerFormElement = document.getElementById('registerForm');
 const showRegisterLink = document.getElementById('showRegister');
 const showLoginLink = document.getElementById('showLogin');
 const logoutBtn = document.getElementById('logoutBtn');
-const historyBtn = document.getElementById('historyBtn');
-const sidebar = document.getElementById('sidebar');
-const closeSidebar = document.getElementById('closeSidebar');
+const leftSidebar = document.getElementById('left-sidebar');
+const mainContent = document.querySelector('.main-content');
+const toggleSidebar = document.getElementById('toggleSidebar');
+const newProjectBtn = document.getElementById('newProjectBtn');
+const projectsList = document.getElementById('projectsList');
 const historyList = document.getElementById('historyList');
+const currentProjectTitle = document.getElementById('currentProjectTitle');
+const currentProjectDescription = document.getElementById('currentProjectDescription');
+const summarizeProgressBtn = document.getElementById('summarizeProgressBtn');
+const newDiseaseModal = document.getElementById('newDiseaseModal');
+const newDiseaseForm = document.getElementById('newDiseaseForm');
+const closeModal = document.getElementById('closeModal');
+const cancelDisease = document.getElementById('cancelDisease');
 const chatMessages = document.getElementById('chat-messages');
 const welcomeMessage = document.getElementById('welcome-message');
 const messageInput = document.getElementById('messageInput');
@@ -51,6 +63,7 @@ async function initializeApp() {
         try {
             await fetchUserInfo();
             showChatScreen();
+            await loadProjects();
             await loadChatHistory();
         } catch (error) {
             console.error('Token validation failed:', error);
@@ -109,6 +122,35 @@ registerFormElement.addEventListener('submit', async (e) => {
 logoutBtn.addEventListener('click', () => {
     clearAuth();
     showAuthScreen();
+});
+
+// New Project Event Listeners
+newProjectBtn.addEventListener('click', () => {
+    newDiseaseModal.classList.remove('hidden');
+});
+
+closeModal.addEventListener('click', () => {
+    newDiseaseModal.classList.add('hidden');
+});
+
+cancelDisease.addEventListener('click', () => {
+    newDiseaseModal.classList.add('hidden');
+});
+
+newDiseaseForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await createNewProject();
+});
+
+// Sidebar Toggle
+toggleSidebar.addEventListener('click', () => {
+    leftSidebar.classList.toggle('collapsed');
+    mainContent.classList.toggle('sidebar-collapsed');
+});
+
+// Summarize Progress
+summarizeProgressBtn.addEventListener('click', async () => {
+    await summarizeProgress();
 });
 
 // Authentication Handlers
@@ -330,6 +372,9 @@ async function sendMessage() {
         const formData = new FormData();
         formData.append('image', imageFile);
         formData.append('symptoms', message || 'No specific symptoms described');
+        if (currentProjectId) {
+            formData.append('project_id', currentProjectId);
+        }
         
         // Send request
         const response = await fetch(`${API_BASE_URL}/api/ai/skin-analysis`, {
@@ -419,14 +464,156 @@ function addMessage(text, sender, imageFile = null, isLoading = false) {
     return messageDiv;
 }
 
-// Sidebar Functions
-historyBtn.addEventListener('click', () => {
-    sidebar.classList.remove('hidden');
-});
+// Project Management Functions
+async function loadProjects() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            projects = await response.json();
+            renderProjects();
+        }
+    } catch (error) {
+        console.error('Error loading projects:', error);
+    }
+}
 
-closeSidebar.addEventListener('click', () => {
-    sidebar.classList.add('hidden');
-});
+async function createNewProject() {
+    const title = document.getElementById('diseaseTitle').value;
+    const description = document.getElementById('diseaseDescription').value;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/projects`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                title,
+                description
+            })
+        });
+        
+        if (response.ok) {
+            const newProject = await response.json();
+            projects.push(newProject);
+            renderProjects();
+            newDiseaseModal.classList.add('hidden');
+            newDiseaseForm.reset();
+            showNotification('Disease/condition created successfully!', 'success');
+        } else {
+            throw new Error('Failed to create project');
+        }
+    } catch (error) {
+        console.error('Error creating project:', error);
+        showNotification('Failed to create disease/condition', 'error');
+    }
+}
+
+function renderProjects() {
+    projectsList.innerHTML = '';
+    
+    projects.forEach(project => {
+        const projectItem = document.createElement('div');
+        projectItem.className = 'project-item';
+        projectItem.innerHTML = `
+            <h4>${project.title}</h4>
+            <p>${project.description}</p>
+        `;
+        
+        projectItem.addEventListener('click', () => {
+            selectProject(project);
+        });
+        
+        projectsList.appendChild(projectItem);
+    });
+}
+
+function selectProject(project) {
+    currentProject = project;
+    currentProjectId = project.id;
+    
+    // Update UI
+    currentProjectTitle.textContent = project.title;
+    currentProjectDescription.textContent = project.description;
+    
+    // Show summarize button for disease projects
+    if (project.id !== 'general') {
+        summarizeProgressBtn.classList.remove('hidden');
+    } else {
+        summarizeProgressBtn.classList.add('hidden');
+    }
+    
+    // Update active states
+    document.querySelectorAll('.project-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.target.closest('.project-item').classList.add('active');
+    
+    // Clear current chat and load project-specific history
+    chatMessages.innerHTML = '';
+    welcomeMessage.classList.add('hidden');
+    loadProjectHistory(project.id);
+}
+
+async function loadProjectHistory(projectId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/chat/history?project_id=${projectId}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const messages = await response.json();
+            messages.forEach(message => {
+                addMessageToChat(message.content, message.role, message.created_at);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading project history:', error);
+    }
+}
+
+async function summarizeProgress() {
+    if (!currentProject || currentProject.id === 'general') {
+        showNotification('No active disease/condition to summarize', 'warning');
+        return;
+    }
+    
+    try {
+        showNotification('Generating progress summary...', 'info');
+        
+        const response = await fetch(`${API_BASE_URL}/chat/summarize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({
+                project_id: currentProjectId,
+                project_title: currentProject.title,
+                project_description: currentProject.description
+            })
+        });
+        
+        if (response.ok) {
+            const summary = await response.json();
+            addMessageToChat(summary.summary, 'assistant');
+            showNotification('Progress summary generated!', 'success');
+        } else {
+            throw new Error('Failed to generate summary');
+        }
+    } catch (error) {
+        console.error('Error generating summary:', error);
+        showNotification('Failed to generate progress summary', 'error');
+    }
+}
 
 // Notification System
 function showNotification(message, type = 'info') {

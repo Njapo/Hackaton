@@ -39,6 +39,34 @@ class User(Base):
 
     # Relationships
     chat_messages = relationship("ChatMessage", back_populates="owner", cascade="all, delete-orphan")
+    projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+
+
+class Project(Base):
+    """
+    Project model for storing disease/condition tracking.
+    
+    Fields:
+    - id: Primary key
+    - owner_id: Foreign key to the user who created the project
+    - title: Project/disease name
+    - description: Project description
+    - created_at: Timestamp when project was created
+    
+    Relationships:
+    - owner: Many-to-one relationship with User model
+    - chat_messages: One-to-many relationship with ChatMessage model
+    """
+    __tablename__ = "projects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    owner = relationship("User", back_populates="projects")
+    chat_messages = relationship("ChatMessage", back_populates="project", cascade="all, delete-orphan")
 
 
 class ChatMessage(Base):
@@ -48,19 +76,23 @@ class ChatMessage(Base):
     Fields:
     - id: Primary key
     - owner_id: Foreign key to the user who initiated the chat
+    - project_id: Foreign key to the project (optional)
     - message: The user's original query/symptoms
     - response: The AI's generated response
     - created_at: Timestamp of the interaction
     
     Relationships:
     - owner: Many-to-one relationship with User model
+    - project: Many-to-one relationship with Project model
     """
     __tablename__ = "chat_messages"
 
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
     message = Column(Text, nullable=False)
     response = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="chat_messages")
+    project = relationship("Project", back_populates="chat_messages")

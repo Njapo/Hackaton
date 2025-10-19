@@ -152,6 +152,7 @@ async def get_current_user_info(
 async def skin_analysis(
     image: UploadFile = File(...),
     symptoms: str = Form(...),
+    project_id: int = Form(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_active_user)
 ):
@@ -186,7 +187,8 @@ async def skin_analysis(
     # 4. Save the interaction to the database
     chat_message_data = schemas.ChatMessageCreate(
         message=f"Symptoms: {symptoms} | Image Prediction: {predicted_disease}",
-        response=ai_response_text
+        response=ai_response_text,
+        project_id=project_id
     )
     db_message = crud.create_chat_message(db, chat_message_data, user_id=current_user.id)
 
@@ -202,6 +204,84 @@ def get_user_history(
 ):
     """Get the current user's chat history."""
     return crud.get_user_chat_messages(db, user_id=current_user.id)
+
+
+# ============= Project Endpoints =============
+
+@app.get("/projects", response_model=List[schemas.Project], tags=["Projects"])
+def get_user_projects(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """Get all projects for the current user."""
+    return crud.get_user_projects(db, user_id=current_user.id)
+
+
+@app.post("/projects", response_model=schemas.Project, tags=["Projects"])
+def create_project(
+    project: schemas.ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """Create a new project for the current user."""
+    return crud.create_project(db, project, user_id=current_user.id)
+
+
+@app.get("/chat/history", response_model=List[schemas.ChatMessage], tags=["Chat"])
+def get_chat_history(
+    project_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """Get chat history for a specific project or all projects."""
+    if project_id:
+        return crud.get_project_chat_messages(db, project_id, user_id=current_user.id)
+    else:
+        return crud.get_user_chat_messages(db, user_id=current_user.id)
+
+
+@app.post("/chat/summarize", response_model=schemas.SummarizeResponse, tags=["Chat"])
+async def summarize_progress(
+    request: schemas.SummarizeRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """Generate a progress summary for a specific project."""
+    # Verify project belongs to user
+    project = crud.get_project(db, request.project_id, user_id=current_user.id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    # Get all messages for this project
+    messages = crud.get_project_chat_messages(db, request.project_id, user_id=current_user.id)
+    
+    # Create context for AI
+    context = f"Project: {request.project_title}\nDescription: {request.project_description}\n\n"
+    context += "Chat History:\n"
+    for msg in messages:
+        context += f"User: {msg.message}\nAssistant: {msg.response}\n\n"
+    
+    # Generate summary using AI
+    summary_prompt = f"""
+    Based on the following project and chat history, provide a comprehensive progress summary:
+    
+    {context}
+    
+    Please summarize:
+    1. Current status of the condition/treatment
+    2. Key symptoms and observations
+    3. Treatment progress and effectiveness
+    4. Recommendations for next steps
+    5. Any concerns or improvements noted
+    
+    Format the summary in a clear, professional manner suitable for medical review.
+    """
+    
+    try:
+        summary = await get_ai_response(summary_prompt)
+        return schemas.SummarizeResponse(summary=summary)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
 
 
 # ============= Run Application =============

@@ -81,43 +81,64 @@
 
         <!-- Main Chat Interface -->
         <div id="chat-screen" class="chat-screen hidden">
-            <!-- Header -->
-            <header class="chat-header">
-                <div class="header-left">
-                    <div class="logo">
-                        <i class="fas fa-user-md"></i>
-                        <h1>SkinAI</h1>
-                    </div>
-                </div>
-                <div class="header-right">
-                    <button id="historyBtn" class="btn btn-secondary">
-                        <i class="fas fa-history"></i>
-                        History
-                    </button>
-                    <button id="logoutBtn" class="btn btn-secondary">
-                        <i class="fas fa-sign-out-alt"></i>
-                        Logout
+            <!-- Left Sidebar -->
+            <div id="left-sidebar" class="left-sidebar">
+                <!-- Sidebar Header -->
+                <div class="sidebar-header">
+                    <button id="newProjectBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        New Disease
                     </button>
                 </div>
-            </header>
 
-            <!-- Chat Container -->
-            <div class="chat-container">
-                <!-- Sidebar for History -->
-                <div id="sidebar" class="sidebar hidden">
-                    <div class="sidebar-header">
-                        <h3>Chat History</h3>
-                        <button id="closeSidebar" class="btn btn-icon">
-                            <i class="fas fa-times"></i>
-                        </button>
+                <!-- Projects Section -->
+                <div class="projects-section">
+                    <h3>Diseases & Conditions</h3>
+                    <div id="projectsList" class="projects-list">
+                        <!-- Projects will be populated here -->
                     </div>
+                </div>
+
+                <!-- Chat History Section -->
+                <div class="history-section">
+                    <h3>Recent Chats</h3>
                     <div id="historyList" class="history-list">
                         <!-- History items will be populated here -->
                     </div>
                 </div>
 
-                <!-- Main Chat Area -->
-                <div class="chat-main">
+                <!-- Sidebar Footer -->
+                <div class="sidebar-footer">
+                    <button id="logoutBtn" class="btn btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Chat Area -->
+            <div class="main-content">
+                <!-- Header -->
+                <header class="chat-header">
+                    <div class="header-left">
+                        <div class="current-project">
+                            <h2 id="currentProjectTitle">SkinAI Assistant</h2>
+                            <p id="currentProjectDescription">General skin health consultation</p>
+                        </div>
+                    </div>
+                    <div class="header-right">
+                        <button id="summarizeProgressBtn" class="btn btn-secondary hidden">
+                            <i class="fas fa-chart-line"></i>
+                            Summarize Progress
+                        </button>
+                        <button id="toggleSidebar" class="btn btn-secondary">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Chat Container -->
+                <div class="chat-container">
                     <!-- Welcome Message -->
                     <div id="welcome-message" class="welcome-message">
                         <div class="welcome-content">
@@ -167,6 +188,34 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Disease Modal -->
+        <div id="newDiseaseModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Create New Disease/Condition</h3>
+                    <button id="closeModal" class="btn btn-icon">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="newDiseaseForm">
+                        <div class="form-group">
+                            <label for="diseaseTitle">Disease/Condition Name</label>
+                            <input type="text" id="diseaseTitle" placeholder="e.g., Acne Treatment, Eczema Management" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="diseaseDescription">Description</label>
+                            <textarea id="diseaseDescription" placeholder="Describe the condition, symptoms, or treatment goals..." rows="4" required></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="cancelDisease" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Create Disease</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

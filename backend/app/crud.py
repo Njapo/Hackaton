@@ -135,6 +135,85 @@ def delete_user(db: Session, user_id: int) -> bool:
     return False
 
 
+# ============= Project CRUD Operations =============
+
+def create_project(db: Session, project: schemas.ProjectCreate, user_id: int) -> models.Project:
+    """
+    Create a new project for a user.
+    
+    Args:
+        db: Database session
+        project: ProjectCreate schema with project data
+        user_id: The ID of the user who owns this project
+        
+    Returns:
+        Created Project object
+    """
+    db_project = models.Project(
+        title=project.title,
+        description=project.description,
+        owner_id=user_id
+    )
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    return db_project
+
+
+def get_user_projects(db: Session, user_id: int) -> List[models.Project]:
+    """
+    Get all projects for a specific user, ordered by most recent.
+    
+    Args:
+        db: Database session
+        user_id: The ID of the user
+        
+    Returns:
+        List of Project objects
+    """
+    return db.query(models.Project)\
+             .filter(models.Project.owner_id == user_id)\
+             .order_by(desc(models.Project.created_at))\
+             .all()
+
+
+def get_project(db: Session, project_id: int, user_id: int) -> Optional[models.Project]:
+    """
+    Get a specific project by ID for a user.
+    
+    Args:
+        db: Database session
+        project_id: The ID of the project
+        user_id: The ID of the user
+        
+    Returns:
+        Project object or None if not found
+    """
+    return db.query(models.Project)\
+             .filter(models.Project.id == project_id)\
+             .filter(models.Project.owner_id == user_id)\
+             .first()
+
+
+def get_project_chat_messages(db: Session, project_id: int, user_id: int) -> List[models.ChatMessage]:
+    """
+    Get all chat messages for a specific project.
+    
+    Args:
+        db: Database session
+        project_id: The ID of the project
+        user_id: The ID of the user
+        
+    Returns:
+        List of ChatMessage objects
+    """
+    return db.query(models.ChatMessage)\
+             .filter(models.ChatMessage.project_id == project_id)\
+             .filter(models.ChatMessage.owner_id == user_id)\
+             .order_by(models.ChatMessage.created_at)\
+             .all()
+
+
 # ============= Chat Message CRUD Operations =============
 
 def create_chat_message(db: Session, message: schemas.ChatMessageCreate, user_id: int) -> models.ChatMessage:
@@ -152,7 +231,8 @@ def create_chat_message(db: Session, message: schemas.ChatMessageCreate, user_id
     db_message = models.ChatMessage(
         message=message.message,
         response=message.response,
-        owner_id=user_id
+        owner_id=user_id,
+        project_id=message.project_id
     )
     db.add(db_message)
     db.commit()
